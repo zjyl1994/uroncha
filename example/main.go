@@ -24,7 +24,7 @@ func main() {
 }
 
 //EXAMPLE: GET http://127.0.0.1:8000/ping
-func pingHandler(c *uroncha.Context, params uroncha.Datas) (interface{}, uroncha.Error) {
+func pingHandler(c *uroncha.Context) (interface{}, uroncha.Error) {
 	return uroncha.H{
 		"name":  "URONCHA",
 		"debug": uroncha.IsDebug(),
@@ -32,10 +32,10 @@ func pingHandler(c *uroncha.Context, params uroncha.Datas) (interface{}, uroncha
 }
 
 //EXAMPLE: GET http://127.0.0.1:8000/get?type=2&ts=1562752722
-func getHandler(c *uroncha.Context, params uroncha.Datas) (interface{}, uroncha.Error) {
+func getHandler(c *uroncha.Context) (interface{}, uroncha.Error) {
 	return uroncha.H{
-		"type": params.QueryString["type"],
-		"ts":   params.QueryString["ts"],
+		"type": c.QueryString["type"],
+		"ts":   c.QueryString["ts"],
 	}, uroncha.NoError
 }
 
@@ -49,8 +49,8 @@ EXAMPLE: POST http://127.0.0.1:8000/post
 	"data4":"d3"
 }
 */
-func postHandler(c *uroncha.Context, params uroncha.Datas) (interface{}, uroncha.Error) {
-	body := params.Body
+func postHandler(c *uroncha.Context) (interface{}, uroncha.Error) {
+	body := c.Body
 	data1 := body.Get("data1").MustString()
 	data3 := body.Get("data2").Get("data3").MustInt()
 	data4 := body.Get("data4").MustString()
