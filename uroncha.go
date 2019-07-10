@@ -56,17 +56,28 @@ func Handle(method, url string, validRules Rules, handler HandleFunc) {
 			c.AbortWithStatus(500)
 			return
 		}
-		params := Datas{
-			QueryString: cv.QueryString().Data(),
-			Body:        cv.Body().Data(),
+		validated, validMsg := cv.Valid(validRules)
+		if !validated {
+			c.JSON(200, gin.H{
+				"success":   false,
+				"code":      1,
+				"message":   "param not validated",
+				"result":    validMsg,
+				"timestamp": timestamp,
+			})
+		} else {
+			params := Datas{
+				QueryString: cv.QueryString().Data(),
+				Body:        cv.Body().Data(),
+			}
+			ret, uerr := handler(c, params)
+			c.JSON(200, gin.H{
+				"success":   uerr.Success,
+				"code":      uerr.Code,
+				"message":   uerr.Message,
+				"result":    ret,
+				"timestamp": timestamp,
+			})
 		}
-		ret, uerr := handler(c, params)
-		c.JSON(200, gin.H{
-			"success":   uerr.Success,
-			"code":      uerr.Code,
-			"message":   uerr.Message,
-			"result":    ret,
-			"timestamp": timestamp,
-		})
 	})
 }
