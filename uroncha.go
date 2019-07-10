@@ -32,6 +32,7 @@ func init() {
 	} else {
 		gin.SetMode(gin.ReleaseMode)
 	}
+	httpPort = os.Getenv("URONCHA_PORT")
 	router = gin.Default()
 	router.GET("/health", func(ctx *gin.Context) {
 		ctx.Status(http.StatusOK)

@@ -1,4 +1,4 @@
-package uroncha
+package utils
 
 import "time"
 
