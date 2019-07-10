@@ -2,7 +2,11 @@ package uroncha
 
 import (
 	"encoding/json"
+	"fmt"
+	"net"
 	"net/http"
+	"net/http/httputil"
+	"os"
 	"strings"
 	"time"
 
@@ -19,17 +23,21 @@ var Logger *logrus.Logger
 var router *httprouter.Router
 var srv *http.Server
 var debugMode bool
+var loggerUseColor bool
 
 func init() {
-	debugMode = strings.EqualFold(utils.MustGetenvStr("URONCHA_DEBUG", "false"), "true")
+	debugMode = utils.MustGetenvBool("URONCHA_DEBUG", false)
+	loggerUseColor = !utils.MustGetenvBool("URONCHA_DISABLE_COLOR", false)
 	Logger = logrus.New()
 	Logger.SetFormatter(&logrus.TextFormatter{
 		TimestampFormat:  "2006-01-02 15:04:05.000",
 		DisableTimestamp: false,
 		FullTimestamp:    true,
+		ForceColors:      loggerUseColor,
 	})
+	Logger.SetReportCaller(debugMode)
 	router = httprouter.New()
-	timeoutHandler := http.TimeoutHandler(router, time.Duration(utils.MustGetenvInt("URONCHA_HANDLER_TIMEOUT", 3)), "")
+	timeoutHandler := http.TimeoutHandler(router, time.Duration(utils.MustGetenvInt("URONCHA_HANDLER_TIMEOUT", 8))*time.Second, "")
 	srv = &http.Server{
 		Addr:         utils.MustGetenvStr("URONCHA_PORT", ":8080"),
 		Handler:      timeoutHandler,
@@ -49,11 +57,56 @@ func IsDebug() bool {
 
 func Handle(method, url string, validRules Rules, handler HandleFunc) {
 	router.Handle(method, url, func(w http.ResponseWriter, r *http.Request, hrps httprouter.Params) {
-		timestamp := time.Now().Unix()
+		defer func() {
+			if err := recover(); err != nil {
+				var brokenPipe bool
+				if ne, ok := err.(*net.OpError); ok {
+					if se, ok := ne.Err.(*os.SyscallError); ok {
+						if strings.Contains(strings.ToLower(se.Error()), "broken pipe") || strings.Contains(strings.ToLower(se.Error()), "connection reset by peer") {
+							brokenPipe = true
+						}
+					}
+				}
+				stack := stack(3)
+				httpRequest, _ := httputil.DumpRequest(r, false)
+				headers := strings.Split(string(httpRequest), "\r\n")
+				for idx, header := range headers {
+					current := strings.Split(header, ":")
+					if current[0] == "Authorization" {
+						headers[idx] = current[0] + ": *"
+					}
+				}
+				var errMsg string
+				if brokenPipe {
+					errMsg = fmt.Sprintf("\n%s\n%s", err, string(httpRequest))
+				} else if debugMode {
+					errMsg = fmt.Sprintf("\n%s panic recovered:\n%s%s\n%s",
+						time.Now().Format("2006-01-02 15:04:05.000"), strings.Join(headers, "\r\n"), err, stack)
+				} else {
+					errMsg = fmt.Sprintf("\n%s panic recovered:\n%s%s",
+						time.Now().Format("2006-01-02 15:04:05.000"), err, stack)
+				}
+				if loggerUseColor {
+					errMsg = "\x1b[31m" + errMsg + "\x1b[0m"
+				}
+				fmt.Println(errMsg)
+				if !brokenPipe {
+					w.WriteHeader(http.StatusInternalServerError)
+				}
+			}
+		}()
+		startTime := time.Now()
+		timestamp := startTime.Unix()
 		cv, err := caasiu.New(r)
 		if err != nil {
-			Logger.Errorln("failed to init caasiu", err.Error())
 			w.WriteHeader(http.StatusInternalServerError)
+			Logger.WithFields(logrus.Fields{
+				"method":  method,
+				"url":     url,
+				"status":  http.StatusInternalServerError,
+				"elapsed": time.Since(startTime).String(),
+				"error":   err.Error(),
+			}).Error("failed to init caasiu")
 			return
 		}
 		validated, validMsg := cv.Valid(validRules)
@@ -89,13 +142,33 @@ func Handle(method, url string, validRules Rules, handler HandleFunc) {
 		}
 		bjson, err := json.Marshal(result)
 		if err != nil {
-			Logger.Errorln("failed to marshal json", err.Error())
 			w.WriteHeader(http.StatusInternalServerError)
+			Logger.WithFields(logrus.Fields{
+				"method":  method,
+				"url":     url,
+				"status":  http.StatusInternalServerError,
+				"elapsed": time.Since(startTime).String(),
+				"error":   err.Error(),
+			}).Error("failed to marshal json")
 		} else {
 			w.WriteHeader(http.StatusOK)
-			n, err := w.Write(bjson)
+			w.Header().Set("Content-Type", "application/json")
+			_, err := w.Write(bjson)
 			if err != nil {
-				Logger.Errorln("failed to write response", err.Error(), n)
+				Logger.WithFields(logrus.Fields{
+					"method":  method,
+					"url":     url,
+					"status":  http.StatusInternalServerError,
+					"elapsed": time.Since(startTime).String(),
+					"error":   err.Error(),
+				}).Error("failed to write response")
+			} else {
+				Logger.WithFields(logrus.Fields{
+					"method":  method,
+					"url":     url,
+					"status":  http.StatusOK,
+					"elapsed": time.Since(startTime).String(),
+				}).Info(url)
 			}
 		}
 	})

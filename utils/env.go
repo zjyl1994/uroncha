@@ -1,6 +1,9 @@
 package utils
 
-import "os"
+import (
+	"os"
+	"strings"
+)
 
 func MustGetenvStr(name, defaultValue string) string {
 	env := os.Getenv(name)
@@ -22,4 +25,17 @@ func MustGetenvInt(name string, defaultValue int) int {
 			return defaultValue
 		}
 	}
+}
+
+func MustGetenvBool(name string, defaultValue bool) bool {
+	env := os.Getenv(name)
+	if !StringEmptyOrBlank(env) {
+		if strings.EqualFold(env, "true") {
+			return true
+		}
+		if strings.EqualFold(env, "false") {
+			return false
+		}
+	}
+	return defaultValue
 }
