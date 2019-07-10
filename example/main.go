@@ -1,6 +1,11 @@
 package main
 
-import "github.com/zjyl1994/uroncha"
+import (
+	"time"
+
+	"github.com/zjyl1994/uroncha"
+	"github.com/zjyl1994/uroncha/utils"
+)
 
 var logger = uroncha.Logger
 
@@ -20,10 +25,16 @@ func main() {
 			"data4":       []string{"string", "in:d1,d2,d3"},
 		},
 	}, postHandler)
+	uroncha.Handle("GET", "/sleep", uroncha.Rules{
+		QueryString: uroncha.Rule{
+			"millisecond": []string{"required", "integer"},
+		},
+	}, sleepHandler)
+	uroncha.Handle("GET", "/panic", uroncha.Rules{}, panicHandler)
 	uroncha.Run()
 }
 
-//EXAMPLE: GET http://127.0.0.1:8000/ping
+//EXAMPLE: GET http://127.0.0.1:8080/ping
 func pingHandler(c *uroncha.Context) (interface{}, uroncha.Error) {
 	return uroncha.H{
 		"name":  "URONCHA",
@@ -31,7 +42,7 @@ func pingHandler(c *uroncha.Context) (interface{}, uroncha.Error) {
 	}, uroncha.NoError
 }
 
-//EXAMPLE: GET http://127.0.0.1:8000/get?type=2&ts=1562752722
+//EXAMPLE: GET http://127.0.0.1:8080/get?type=2&ts=1562752722
 func getHandler(c *uroncha.Context) (interface{}, uroncha.Error) {
 	return uroncha.H{
 		"type": c.QueryString["type"],
@@ -40,7 +51,7 @@ func getHandler(c *uroncha.Context) (interface{}, uroncha.Error) {
 }
 
 /*
-EXAMPLE: POST http://127.0.0.1:8000/post
+EXAMPLE: POST http://127.0.0.1:8080/post
 {
 	"data1":"asdfghjkl",
 	"data2":{
@@ -59,4 +70,17 @@ func postHandler(c *uroncha.Context) (interface{}, uroncha.Error) {
 		"data3": data3,
 		"data4": data4,
 	}, uroncha.NoError
+}
+
+//EXAMPLE: GET http://127.0.0.1:8080/sleep?millisecond=100
+func sleepHandler(c *uroncha.Context) (interface{}, uroncha.Error) {
+	time.Sleep(time.Duration(utils.Str2Int(c.QueryString["millisecond"])) * time.Millisecond)
+	return uroncha.H{
+		"name":  "URONCHA",
+		"debug": uroncha.IsDebug(),
+	}, uroncha.NoError
+}
+
+func panicHandler(c *uroncha.Context) (interface{}, uroncha.Error) {
+	panic("don't panic!")
 }
