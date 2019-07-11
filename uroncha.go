@@ -12,6 +12,7 @@ import (
 
 	_ "github.com/joho/godotenv/autoload"
 	"github.com/julienschmidt/httprouter"
+	"github.com/rs/xid"
 	"github.com/sirupsen/logrus"
 	"github.com/zjyl1994/caasiu"
 	"github.com/zjyl1994/uroncha/utils"
@@ -62,7 +63,9 @@ func Handle(method, url string, validRules Rules, handler HandleFunc) {
 		Logger.Infof("%s\t%s\t%s\n", method, url, utils.NameOfFunction(handler))
 	}
 	router.Handle(method, url, func(w http.ResponseWriter, r *http.Request, hrps httprouter.Params) {
-		defer func() {
+		startTime := time.Now()
+		requestId := xid.New().String()
+		defer func(requestId string) {
 			if err := recover(); err != nil {
 				var brokenPipe bool
 				if ne, ok := err.(*net.OpError); ok {
@@ -83,13 +86,13 @@ func Handle(method, url string, validRules Rules, handler HandleFunc) {
 				}
 				var errMsg string
 				if brokenPipe {
-					errMsg = fmt.Sprintf("\n%s\n%s", err, string(httpRequest))
+					errMsg = fmt.Sprintf("\nREQUEST[%s] %s\n%s", requestId, err, string(httpRequest))
 				} else if debugMode {
-					errMsg = fmt.Sprintf("\n%s panic recovered:\n%s%s\n%s",
-						time.Now().Format("2006-01-02 15:04:05.000"), strings.Join(headers, "\r\n"), err, stack)
+					errMsg = fmt.Sprintf("\n%s REQUEST[%s] panic recovered:\n%s%s\n%s",
+						time.Now().Format("2006-01-02 15:04:05.000"), requestId, strings.Join(headers, "\r\n"), err, stack)
 				} else {
-					errMsg = fmt.Sprintf("\n%s panic recovered:\n%s%s",
-						time.Now().Format("2006-01-02 15:04:05.000"), err, stack)
+					errMsg = fmt.Sprintf("\n%s REQUEST[%s] panic recovered:\n%s%s",
+						time.Now().Format("2006-01-02 15:04:05.000"), requestId, err, stack)
 				}
 				if loggerUseColor {
 					errMsg = "\x1b[31m" + errMsg + "\x1b[0m"
@@ -99,18 +102,18 @@ func Handle(method, url string, validRules Rules, handler HandleFunc) {
 					w.WriteHeader(http.StatusInternalServerError)
 				}
 			}
-		}()
-		startTime := time.Now()
+		}(requestId)
 		timestamp := startTime.Unix()
 		cv, err := caasiu.New(r)
 		if err != nil {
 			w.WriteHeader(http.StatusInternalServerError)
 			Logger.WithFields(logrus.Fields{
-				"method":  method,
-				"url":     url,
-				"status":  http.StatusInternalServerError,
-				"elapsed": time.Since(startTime).String(),
-				"error":   err.Error(),
+				"method":    method,
+				"url":       url,
+				"status":    http.StatusInternalServerError,
+				"elapsed":   time.Since(startTime).String(),
+				"requestId": requestId,
+				"error":     err.Error(),
 			}).Error("failed to init caasiu")
 			return
 		}
@@ -123,6 +126,7 @@ func Handle(method, url string, validRules Rules, handler HandleFunc) {
 				"message":   "param not validated",
 				"result":    validMsg,
 				"timestamp": timestamp,
+				"requestId": requestId,
 			}
 		} else {
 			pathParam := make(map[string]string)
@@ -143,17 +147,19 @@ func Handle(method, url string, validRules Rules, handler HandleFunc) {
 				"message":   uerr.Message,
 				"result":    ret,
 				"timestamp": timestamp,
+				"requestId": requestId,
 			}
 		}
 		bjson, err := json.Marshal(result)
 		if err != nil {
 			w.WriteHeader(http.StatusInternalServerError)
 			Logger.WithFields(logrus.Fields{
-				"method":  method,
-				"url":     url,
-				"status":  http.StatusInternalServerError,
-				"elapsed": time.Since(startTime).String(),
-				"error":   err.Error(),
+				"method":    method,
+				"url":       url,
+				"status":    http.StatusInternalServerError,
+				"elapsed":   time.Since(startTime).String(),
+				"requestId": requestId,
+				"error":     err.Error(),
 			}).Error("failed to marshal json")
 		} else {
 			w.WriteHeader(http.StatusOK)
@@ -161,18 +167,20 @@ func Handle(method, url string, validRules Rules, handler HandleFunc) {
 			_, err := w.Write(bjson)
 			if err != nil {
 				Logger.WithFields(logrus.Fields{
-					"method":  method,
-					"url":     url,
-					"status":  http.StatusInternalServerError,
-					"elapsed": time.Since(startTime).String(),
-					"error":   err.Error(),
+					"method":    method,
+					"url":       url,
+					"status":    http.StatusInternalServerError,
+					"elapsed":   time.Since(startTime).String(),
+					"requestId": requestId,
+					"error":     err.Error(),
 				}).Error("failed to write response")
 			} else {
 				Logger.WithFields(logrus.Fields{
-					"method":  method,
-					"url":     url,
-					"status":  http.StatusOK,
-					"elapsed": time.Since(startTime).String(),
+					"method":    method,
+					"url":       url,
+					"status":    http.StatusOK,
+					"elapsed":   time.Since(startTime).String(),
+					"requestId": requestId,
 				}).Info(url)
 			}
 		}

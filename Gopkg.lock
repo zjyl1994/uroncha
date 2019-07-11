@@ -37,6 +37,14 @@
   version = "v1.0.2"
 
 [[projects]]
+  digest = "1:2e76a73cb51f42d63a2a1a85b3dc5731fd4faf6821b434bd0ef2c099186031d6"
+  name = "github.com/rs/xid"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "15d26544def341f036c5f8dca987a4cbe575032c"
+  version = "v1.2.1"
+
+[[projects]]
   digest = "1:04457f9f6f3ffc5fea48e71d62f2ca256637dee0a04d710288e27e05c8b41976"
   name = "github.com/sirupsen/logrus"
   packages = ["."]
@@ -67,6 +75,7 @@
     "github.com/bitly/go-simplejson",
     "github.com/joho/godotenv/autoload",
     "github.com/julienschmidt/httprouter",
+    "github.com/rs/xid",
     "github.com/sirupsen/logrus",
     "github.com/zjyl1994/caasiu",
   ]
