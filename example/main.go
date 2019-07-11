@@ -31,6 +31,7 @@ func main() {
 		},
 	}, sleepHandler)
 	uroncha.Handle("GET", "/panic", uroncha.Rules{}, panicHandler)
+	uroncha.Handle("GET", "/downFile", uroncha.Rules{}, downFileHandler)
 	uroncha.Run()
 }
 
@@ -83,4 +84,12 @@ func sleepHandler(c *uroncha.Context) (interface{}, uroncha.Error) {
 
 func panicHandler(c *uroncha.Context) (interface{}, uroncha.Error) {
 	panic("don't panic!")
+}
+
+func downFileHandler(c *uroncha.Context) (interface{}, uroncha.Error) {
+	return uroncha.DownloadFile{
+		FilePath:    "./lorem-ipsum.pdf",
+		FileName:    "li.pdf",
+		ContentType: "application/pdf",
+	}, uroncha.NoError
 }
