@@ -27,3 +27,15 @@ type DownloadFile struct {
 	ContentType string
 	FileName    string
 }
+
+func NewError(err error) Error {
+	if err == nil {
+		return NoError
+	} else {
+		return Error{
+			Success: false,
+			Code:    -1,
+			Message: err.Error(),
+		}
+	}
+}

@@ -32,6 +32,7 @@ func main() {
 	}, sleepHandler)
 	uroncha.Handle("GET", "/panic", uroncha.Rules{}, panicHandler)
 	uroncha.Handle("GET", "/downFile", uroncha.Rules{}, downFileHandler)
+	uroncha.Handle("POST", "/uploadFile", uroncha.Rules{}, uploadFileHandler)
 	uroncha.Run()
 }
 
@@ -94,4 +95,9 @@ func downFileHandler(c *uroncha.Context) (interface{}, uroncha.Error) {
 		FileName:    "li.pdf",
 		ContentType: "application/pdf",
 	}, uroncha.NoError
+}
+
+func uploadFileHandler(c *uroncha.Context) (interface{}, uroncha.Error) {
+	err := c.SaveFile("file", "./uploadedfile")
+	return nil, uroncha.NewError(err)
 }

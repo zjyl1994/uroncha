@@ -137,8 +137,8 @@ func Handle(method, url string, validRules Rules, handler HandleFunc) {
 			c := &Context{
 				Req:         r,
 				Res:         w,
-				QueryString: cv.QueryString().Data(),
-				Body:        cv.Body().Data(),
+				QueryString: cv.QueryStringData(),
+				Body:        cv.JsonBodyData(),
 				PathParam:   pathParam,
 			}
 			ret, uerr := handler(c)

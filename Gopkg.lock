@@ -54,11 +54,11 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:3e4a6ef2315fd7089832db7e6cf2d0ebeac29505b8b8c427468f7c57f558911c"
+  digest = "1:e06d153dc61d52939e905e98bf1a0294fb9e9475460accd48689ee20274ee1ce"
   name = "github.com/zjyl1994/caasiu"
   packages = ["."]
   pruneopts = "UT"
-  revision = "93062aa14946c8368252aa8be04e8a9a12545afd"
+  revision = "f010d7a2395ca894035fbc678bc87d44b1311a21"
 
 [[projects]]
   branch = "master"
