@@ -3,6 +3,7 @@ package uroncha
 import (
 	"encoding/json"
 	"fmt"
+	"io"
 	"net"
 	"net/http"
 	"net/http/httputil"
@@ -141,13 +142,26 @@ func Handle(method, url string, validRules Rules, handler HandleFunc) {
 				PathParam:   pathParam,
 			}
 			ret, uerr := handler(c)
-			result = H{
-				"success":   uerr.Success,
-				"code":      uerr.Code,
-				"message":   uerr.Message,
-				"result":    ret,
-				"timestamp": timestamp,
-				"requestId": requestId,
+			switch ret.(type) {
+			case DownloadFile:
+				df := ret.(DownloadFile)
+				fileWantSend, _ := os.Open(df.FilePath)
+				defer fileWantSend.Close()
+				fileStat, _ := fileWantSend.Stat()
+				w.Header().Set("Content-Type", df.ContentType)
+				w.Header().Set("Content-Disposition", "attachment; filename="+df.FileName)
+				w.Header().Set("Content-Length", utils.Int642Str(fileStat.Size()))
+				io.Copy(w, fileWantSend)
+				return
+			default:
+				result = H{
+					"success":   uerr.Success,
+					"code":      uerr.Code,
+					"message":   uerr.Message,
+					"result":    ret,
+					"timestamp": timestamp,
+					"requestId": requestId,
+				}
 			}
 		}
 		bjson, err := json.Marshal(result)

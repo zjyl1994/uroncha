@@ -82,10 +82,12 @@ func sleepHandler(c *uroncha.Context) (interface{}, uroncha.Error) {
 	}, uroncha.NoError
 }
 
+//EXAMPLE: GET http://127.0.0.1:8080/panic
 func panicHandler(c *uroncha.Context) (interface{}, uroncha.Error) {
 	panic("don't panic!")
 }
 
+//EXAMPLE: GET http://127.0.0.1:8080/downFile
 func downFileHandler(c *uroncha.Context) (interface{}, uroncha.Error) {
 	return uroncha.DownloadFile{
 		FilePath:    "./lorem-ipsum.pdf",

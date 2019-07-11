@@ -21,3 +21,9 @@ var NoError = Error{
 	Code:    0,
 	Message: "",
 }
+
+type DownloadFile struct {
+	FilePath    string
+	ContentType string
+	FileName    string
+}
