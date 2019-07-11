@@ -35,7 +35,9 @@ func init() {
 		FullTimestamp:    true,
 		ForceColors:      loggerUseColor,
 	})
-	Logger.SetReportCaller(debugMode)
+	if debugMode {
+		Logger.Infoln("Uroncha run in debug mode.Set environmental variable URONCHA_DEBUG=False to disable.")
+	}
 	router = httprouter.New()
 	timeoutHandler := http.TimeoutHandler(router, time.Duration(utils.MustGetenvInt("URONCHA_HANDLER_TIMEOUT", 8))*time.Second, "")
 	srv = &http.Server{
@@ -56,6 +58,9 @@ func IsDebug() bool {
 }
 
 func Handle(method, url string, validRules Rules, handler HandleFunc) {
+	if debugMode {
+		Logger.Infof("%s\t%s\t%s\n", method, url, utils.NameOfFunction(handler))
+	}
 	router.Handle(method, url, func(w http.ResponseWriter, r *http.Request, hrps httprouter.Params) {
 		defer func() {
 			if err := recover(); err != nil {
